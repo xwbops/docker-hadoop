@@ -1,0 +1,44 @@
+version: "3.9"
+services:
+  jobmanager:
+    image: harbor.cubestation.com/public/flink:1.17.2-scala_2.12 
+    container_name: jobmanager
+    user: "root:root"
+    command: jobmanager
+    privileged: true
+    restart: always
+    ports:
+      - "8081:8081"
+      - "6123:6123"
+      - "6122:6122"
+    environment:
+      - TZ=Asia/Shanghai
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ./jobmanager/conf/flink-conf.yaml:/opt/flink/conf/flink-conf.yaml
+      - ./jobmanager/lib:/opt/flink/lib
+      - ./jobmanager/log:/opt/flink/log:rw
+      - ./jobmanager/user-upload-temp:/opt/flink/user-upload-temp:rw
+  taskmanager:
+    image: harbor.cubestation.com/public/flink:1.17.2-scala_2.12 
+    container_name: taskmanager
+    user: "root:root"
+    command: taskmanager
+    restart: always
+    links:
+      - jobmanager
+    depends_on:
+      - jobmanager
+    ports:
+      - "6124:6124"
+      - "6125:6125"
+      - "6126:6126"
+    privileged: true
+    environment:
+      - TZ=Asia/Shanghai
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ./taskmanager/lib:/opt/flink/lib
+      - ./jobmanager/conf/flink-conf.yaml:/opt/flink/conf/flink-conf.yaml
+      - ./taskmanager/log:/opt/flink/log:rw
+      - ./taskmanager/user-upload-temp:/opt/flink/user-upload-temp:rw
