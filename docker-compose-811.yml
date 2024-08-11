@@ -1,0 +1,102 @@
+version: '3'
+
+services:
+  namenode:
+    image: harbor.cubestation.com/public/hadoop-namenode2:3.3.6
+    hostname: namenode
+    network_mode: host
+    restart: always
+    volumes:
+      - ./namenode:/hadoop/dfs/name
+    environment:
+      - CLUSTER_NAME=hbaseTest
+      - TZ=Asia/Shanghai
+    env_file:
+      - ./hadoop.env
+    healthcheck:
+      disable: true
+
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+  datanode:
+    image: harbor.cubestation.com/public/hadoop-datanode2:3.3.6
+    hostname: datanode
+    network_mode: host
+    restart: always
+    volumes:
+      - ./datanode:/hadoop/dfs/data
+    env_file:
+      - ./hadoop.env
+    healthcheck:
+      disable: true
+
+    environment:
+      SERVICE_PRECONDITION: "namenode:9870"
+      TZ: Asia/Shanghai
+    deploy:
+      mode: global
+      restart_policy:
+        condition: on-failure
+
+  resourcemanager:
+    image: harbor.cubestation.com/public/hadoop-resourcemanager2:3.3.6
+    hostname: resourcemanager
+    restart: always
+    network_mode: host
+    environment:
+      SERVICE_PRECONDITION: "namenode:9000 namenode:9870 datanode:9864"
+      TZ: Asia/Shanghai
+    healthcheck:
+      disable: true
+
+    env_file:
+      - ./hadoop.env
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+  nodemanager:
+    image: harbor.cubestation.com/public/hadoop-nodemanager2:3.3.6
+    hostname: nodemanager
+    network_mode: host
+    restart: always
+    environment:
+      TZ: Asia/Shanghai
+      SERVICE_PRECONDITION: "namenode:9000 namenode:9870 datanode:9864 resourcemanager:8088"
+    healthcheck:
+      disable: true
+
+    env_file:
+      - ./hadoop.env
+    deploy:
+      mode: global
+      restart_policy:
+        condition: on-failure
+
+  historyserver:
+    image: harbor.cubestation.com/public/hadoop-historyserver2:3.3.6
+    hostname: historyserver
+    network_mode: host
+    restart: always
+    volumes:
+      - ./hadoop_historyserver:/hadoop/yarn/timeline
+    environment:
+      SERVICE_PRECONDITION: "namenode:9000 namenode:9870 datanode:9864 resourcemanager:8088"
+      TZ: Asia/Shanghai
+    healthcheck:
+      disable: true
+
+    env_file:
+      - ./hadoop.env
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.hostname == hbase.gancube.info
